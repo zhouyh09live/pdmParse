@@ -341,13 +341,32 @@ public class LdmMainReader {
     }
 
     // 获取PrimaryIdentifier节点元素对象
-    Element pkElm = node.element("PrimaryIdentifier");
-    if (pkElm != null) {
-      Element pkIdentElm = pkElm.element("Identifier");
-      if (pkIdentElm != null) {
-        Attribute refAttr = pkIdentElm.attribute("Ref");
-        if (refAttr != null) {
-          ldmEntity.setPkOid(refAttr.getText());
+//    Element pkElm = node.element("PrimaryIdentifier");
+//    if (pkElm != null) {
+//      Element pkIdentElm = pkElm.element("Identifier");
+//      if (pkIdentElm != null) {
+//        Attribute refAttr = pkIdentElm.attribute("Ref");
+//        if (refAttr != null) {
+//          ldmEntity.setPkOid(refAttr.getText());
+//        }
+//      }
+//    }
+
+    // 获取PrimaryIdentifier节点元素对象
+    List<Element> pkEles = node.selectNodes("c:PrimaryIdentifier/o:Identifier");
+    List<String> pkIdentifiers = new ArrayList();
+    for (Element pkEle : pkEles) {
+      pkIdentifiers.add(pkEle.attributeValue("Ref"));
+    }
+
+    List<String> pkColumnIds = new ArrayList();
+    for (String pkId : pkIdentifiers) {
+      String xpath = "c:Identifiers/o:Identifier[@Id='" + pkId + "']/c:Identifier.Attributes/o:EntityAttribute";
+      List<Element> identifiers = node.selectNodes(xpath);
+      if (identifiers != null) {
+        for (Element identifier : identifiers) {
+          String pkColumnsId = identifier.attribute("Ref").getText();
+          pkColumnIds.add(pkColumnsId);
         }
       }
     }
@@ -366,7 +385,7 @@ public class LdmMainReader {
         if (ldmEntity.getPkOid() != null && ldmEntity.getPkOid().trim().length() > 0) {
           LdmIdentifier ldmIdentifier = ldmInfo.getIdentHash()
               .get(ldmEntity.getPkOid().trim());//ldmInfo.getIdentHashByOid(ldmEntity.getPkOid().trim());
-          if (ldmIdentifier != null && ldmIdentifier.getRefOid().equalsIgnoreCase(ldmAttribute.getOid())) {
+          if (pkColumnIds.contains(ldmAttribute.getOid())) {
             ldmAttribute.setPk(true);
           } else {
             ldmAttribute.setPk(false);

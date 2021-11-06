@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import ldmObj.LdmAttribute;
 import ldmObj.LdmEntity;
 import ldmObj.LdmIdentifier;
@@ -147,14 +146,20 @@ public class LdmToParseModel {
     }
 
     // 获取PrimaryIdentifier节点元素对象
-    String pkOid = "";
-    Element pkElm = node.element("PrimaryIdentifier");
-    if (pkElm != null) {
-      Element pkIdentElm = pkElm.element("Identifier");
-      if (pkIdentElm != null) {
-        Attribute refAttr = pkIdentElm.attribute("Ref");
-        if (refAttr != null) {
-          pkOid = refAttr.getText();
+    List<Element> pkEles = node.selectNodes("c:PrimaryIdentifier/o:Identifier");
+    List<String> pkIdentifiers = new ArrayList();
+    for (Element pkEle : pkEles) {
+      pkIdentifiers.add(pkEle.attributeValue("Ref"));
+    }
+
+    List<String> pkColumnIds = new ArrayList();
+    for (String pkId : pkIdentifiers) {
+      String xpath = "c:Identifiers/o:Identifier[@Id='" + pkId + "']/c:Identifier.Attributes/o:EntityAttribute";
+      List<Element> identifiers = node.selectNodes(xpath);
+      if (identifiers != null) {
+        for (Element identifier : identifiers) {
+          String pkColumnsId = identifier.attribute("Ref").getText();
+          pkColumnIds.add(pkColumnsId);
         }
       }
     }
@@ -168,7 +173,7 @@ public class LdmToParseModel {
       while (it.hasNext()) {
         // 获取某个子节点对象
         Element elm = (Element) it.next();
-        parseTable.getColumns().add(dealAttrbute(elm, pkOid));
+        parseTable.getColumns().add(dealAttrbute(elm, pkColumnIds));
       }
     }
 
@@ -182,7 +187,7 @@ public class LdmToParseModel {
    * @return
    * @throws Exception
    */
-  public ParseColumn dealAttrbute(Element node, String pkOid) throws Exception {
+  public ParseColumn dealAttrbute(Element node, List<String> pkColumnIds) throws Exception {
     ParseColumn parseColumn = new ParseColumn();
 
     // 读取属性“Id”的值
@@ -221,7 +226,7 @@ public class LdmToParseModel {
     }
 
     // 主键标识
-    if (parseColumn.getColumnId().equals(pkOid)) {
+    if (pkColumnIds.contains(parseColumn.getColumnId())) {
       parseColumn.setIsPk(1);
     }
 
